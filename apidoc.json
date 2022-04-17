@@ -1,0 +1,8 @@
+{
+  "name": "contract-calls",
+  "version": "0.1.0",
+  "description": "Calls to smart contracts through Alchemy",
+  "title": "Calls to smart contracts through Alchemy",
+  "url": "http://localhost:3000",
+  "sampleUrl": true
+}
