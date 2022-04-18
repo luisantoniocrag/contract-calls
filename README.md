@@ -27,13 +27,33 @@ $ npm install
 
 3. ENV variables
 
-Add your `ALCHEMY_URI` variable within a global `.env` file.
+Add the following env variables within an `.env` file in the root directory.
+
+`ALCHEMY_URI`
 
 Example:
 
 ```js
 // .env
 ALCHEMY_URI = 'https://polygon-mumbai.g.alchemy.com/v2/<key/>'
+```
+
+`SC_ADDRESS` (NFT Smart Contract Address)
+
+Example:
+
+```js
+// .env
+SC_ADDRESS= '<0x.../>'
+```
+
+`PK` (Your Private Key - NFT Admin)
+
+Example:
+
+```js
+// .env
+PK= '<yourPrivateKey.../>'
 ```
 
 4. start a local server
