@@ -163,7 +163,7 @@ const services = (app) => {
       }
     }
   );
-  
+
   /**
    * @api {get} http://localhost:3000/mumbai/nft/market-cancel-order/:ownerAddress/:pkOwner/:nftAddress/:orderID Cancel an order to sell an NFT
    * @apiName Cancel an order to sell an NFT
@@ -216,6 +216,67 @@ const services = (app) => {
         );
       } catch (error) {
         return res.status(200).json({ error: error.toString() });
+      }
+    }
+  );
+
+  /**
+   * @api {get} http://localhost:3000/mumbai/nft/market-execute-order/:nftAddress/:newOwner/:orderID/:secKey/:adminPK Execute an order to transfer the NFT
+   * @apiName Execute an order to transfer an NFT
+   * @apiGroup NFTMarketPlace
+   *
+   * @apiParam {String} nftAddress address of order owner
+   * @apiParam {String} newOwner private key of order owner
+   * @apiParam {String} orderID smart contract address of the NFT Collection
+   * @apiParam {String} secKey id of the order id
+   * @apiParam {String} adminPK private ket of the admin
+   *
+   * @apiSuccess {String} txID Transaction hash.
+   */
+
+  app.get(
+    "/mumbai/nft/market-execute-order/:nftAddress/:newOwner/:orderID/:secKey/:adminPK",
+    async (req, res) => {
+      try {
+        const { nftAddress, newOwner, orderID, secKey, adminPK } = req.params;
+
+        const market = new web3.eth.Contract(marketContract.abi, marketAddress);
+
+        const account = web3.eth.accounts.privateKeyToAccount(adminPK);
+
+        const nonce = await web3.eth.getTransactionCount(
+          account.address,
+          "latest"
+        ); // get latest nonce
+
+        const gasEstimate = await market.methods
+          .safeExecuteOrder(nftAddress, newOwner, orderID, secKey)
+          .estimateGas({ from: account.address }); // estimate gas qty
+
+        const transaction = {
+          to: marketAddress,
+          nonce: nonce,
+          gas: gasEstimate,
+          data: market.methods
+            .safeExecuteOrder(nftAddress, newOwner, orderID, secKey)
+            .encodeABI(),
+        };
+
+        const signedTransaction = await web3.eth.accounts.signTransaction(
+          transaction,
+          adminPK
+        );
+
+        web3.eth.sendSignedTransaction(
+          signedTransaction.rawTransaction,
+          (error, hash) => {
+            if (!error) {
+              return res.status(200).json({ txID: hash });
+            }
+          }
+        );
+      } catch (error) {
+        return res.status(400).json({ error: error.toString() });
       }
     }
   );
