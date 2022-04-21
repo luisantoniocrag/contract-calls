@@ -48,45 +48,50 @@ const services = (app) => {
   );
 
   /**
-   * @api {get} http://localhost:3000/mumbai/nft/set-approval-for-all/:address/:operator/:status/:pk Set Approval for All
+   * @api {get} http://localhost:3000/mumbai/nft/set-approval-for-all/:operator/:status/:pk Set Approval for All
    * @apiName Set Approval for All
    * @apiGroup NFTMarketPlace
    *
-   * @apiParam {String} address address of the sender.
    * @apiParam {String} operator address of operator for allow transaction on behalf owner.
-   * @apiParam {String} status this can be set to true or false.
+   * @apiParam {Boolean} status this can be set to true or false.
    * @apiParam {String} pk privKey of sender.
    *
    * @apiSuccess {String} txID Transaction hash.
    */
   app.get(
-    "/mumbai/nft/set-approval-for-all/:address/:operator/:status/:pk",
+    "/mumbai/nft/set-approval-for-all/:operator/:status/:pk",
     async (req, res) => {
       try {
-        const { address, operator, status, pk } = req.params;
+        const { operator, pk } = req.params;
+        let {status} = req.params;
+        status = status === "on"
+
+        const account = web3.eth.accounts.privateKeyToAccount(pk);
         const nftContract = new web3.eth.Contract(
           contract.abi,
           contractAddress
         );
 
-        const nonce = await web3.eth.getTransactionCount(address, "latest"); // get latest nonce
+        const nonce = await web3.eth.getTransactionCount(
+          account.address,
+          "latest"
+        );
 
         const gasEstimate = await nftContract.methods
-          .setApprovalForAll(operator, Boolean(status))
-          .estimateGas({ from: address }); // estimate gas qty
+          .setApprovalForAll(operator, status)
+          .estimateGas({ from: account.address });
 
-        const tx = {
-          from: address,
+        const transaction = {
           to: contractAddress,
           nonce: nonce,
           gas: gasEstimate,
           data: nftContract.methods
-            .setApprovalForAll(operator, Boolean(status))
+            .setApprovalForAll(operator, status)
             .encodeABI(),
         };
 
         const signedTransaction = await web3.eth.accounts.signTransaction(
-          tx,
+          transaction,
           pk
         );
 
@@ -105,11 +110,10 @@ const services = (app) => {
   );
 
   /**
-   * @api {get} http://localhost:3000/mumbai/nft/market-create/:address/:nftAddress/:id/:priceInWei/:expiresAt/:exPay/:pk Create an order to sell an NFT
+   * @api {get} http://localhost:3000/mumbai/nft/market-create/:nftAddress/:id/:priceInWei/:expiresAt/:exPay/:pk Create an order to sell an NFT
    * @apiName Create an order to sell an NFT
    * @apiGroup NFTMarketPlace
    *
-   * @apiParam {String} address address of sender
    * @apiParam {String} pk private key of sender
    * @apiParam {String} nftAddress smart contract address of the NFT Collection
    * @apiParam {Number} id id of the NFT item
@@ -120,23 +124,26 @@ const services = (app) => {
    * @apiSuccess {String} txID Transaction hash.
    */
   app.get(
-    "/mumbai/nft/market-create/:address/:nftAddress/:id/:priceInWei/:expiresAt/:exPay/:pk",
+    "/mumbai/nft/market-create/:nftAddress/:id/:priceInWei/:expiresAt/:exPay/:pk",
     async (req, res) => {
       try {
-        let { address, nftAddress, id, priceInWei, expiresAt, exPay, pk } =
-          req.params;
-
+        const { nftAddress, id, priceInWei, expiresAt, pk } = req.params;
+        let { exPay } = req.params;
         exPay = exPay === "on";
+        const account = web3.eth.accounts.privateKeyToAccount(pk);
 
         const market = new web3.eth.Contract(marketContract.abi, marketAddress);
 
-        const nonce = await web3.eth.getTransactionCount(address, "latest"); // get latest nonce
+        const nonce = await web3.eth.getTransactionCount(
+          account.address,
+          "latest"
+        ); // get latest nonce
 
         const gasEstimate = await market.methods
           .createOrder(nftAddress, id, priceInWei, expiresAt, exPay)
-          .estimateGas({ from: address }); // estimate gas qty
+          .estimateGas({ from: account.address }); // estimate gas qty
 
-        const tx = {
+        const transaction = {
           to: marketAddress,
           nonce: nonce,
           gas: gasEstimate,
@@ -146,7 +153,7 @@ const services = (app) => {
         };
 
         const signedTransaction = await web3.eth.accounts.signTransaction(
-          tx,
+          transaction,
           pk
         );
 
@@ -165,36 +172,36 @@ const services = (app) => {
   );
 
   /**
-   * @api {get} http://localhost:3000/mumbai/nft/market-cancel-order/:ownerAddress/:pkOwner/:nftAddress/:orderID Cancel an order to sell an NFT
+   * @api {get} http://localhost:3000/mumbai/nft/market-cancel-order/:pkOwner/:nftAddress/:orderID Cancel an order to sell an NFT
    * @apiName Cancel an order to sell an NFT
    * @apiGroup NFTMarketPlace
    *
-   * @apiParam {String} ownerAddress address of order owner
-   * @apiParam {String} pkOwner private key of order owner
    * @apiParam {String} nftAddress smart contract address of the NFT Collection
    * @apiParam {Number} orderID id of the order id
+   * @apiParam {String} pkOwner private key of order owner
    *
    * @apiSuccess {String} txID Transaction hash.
    */
 
   app.get(
-    "/mumbai/nft/market-cancel-order/:ownerAddress/:pkOwner/:nftAddress/:orderID",
+    "/mumbai/nft/market-cancel-order/:pkOwner/:nftAddress/:orderID",
     async (req, res) => {
       try {
-        let { ownerAddress, pkOwner, nftAddress, orderID } = req.params;
+        const { pkOwner, nftAddress, orderID } = req.params;
 
+        const account = web3.eth.accounts.privateKeyToAccount(pkOwner);
         const market = new web3.eth.Contract(marketContract.abi, marketAddress);
 
         const nonce = await web3.eth.getTransactionCount(
-          ownerAddress,
+          account.address,
           "latest"
         ); // get latest nonce
 
         const gasEstimate = await market.methods
           .cancelOrder(nftAddress, orderID)
-          .estimateGas({ from: ownerAddress }); // estimate gas qty
+          .estimateGas({ from: account.address }); // estimate gas qty
 
-        const tx = {
+        const transaction = {
           to: marketAddress,
           nonce: nonce,
           gas: gasEstimate,
@@ -202,7 +209,7 @@ const services = (app) => {
         };
 
         const signedTransaction = await web3.eth.accounts.signTransaction(
-          tx,
+          transaction,
           pkOwner
         );
 
@@ -240,14 +247,13 @@ const services = (app) => {
       try {
         const { nftAddress, newOwner, orderID, secKey, adminPK } = req.params;
 
-        const market = new web3.eth.Contract(marketContract.abi, marketAddress);
-
         const account = web3.eth.accounts.privateKeyToAccount(adminPK);
+        const market = new web3.eth.Contract(marketContract.abi, marketAddress);
 
         const nonce = await web3.eth.getTransactionCount(
           account.address,
           "latest"
-        ); // get latest nonce
+        );
 
         const gasEstimate = await market.methods
           .safeExecuteOrder(nftAddress, newOwner, orderID, secKey)
