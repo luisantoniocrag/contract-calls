@@ -36,23 +36,24 @@ const services = (app) => {
  });
 
  /**
-   * @api {get} http://localhost:3000/mumbai/account/transfer/matic/:sender/:receiver/:amount/:pkSender Send Matic
+   * @api {get} http://localhost:3000/mumbai/account/transfer/matic/:receiver/:amount/:pkSender Send Matic
    * @apiName Send Matic to a given address from a priv key account
    * @apiGroup Accounts
    *
-   * @apiParam {String} sender address of sender.
    * @apiParam {String} pkSender privKey of sender.
    * @apiParam {String} receiver address of receiver.
    * @apiParam {String} amount amount in matic (can be in decimal as: 1.1).
    *
    * @apiSuccess {String} txID Transaction hash.
    */
- app.get('/mumbai/account/transfer/matic/:sender/:receiver/:amount/:pkSender', async (req, res) => {
+ app.get('/mumbai/account/transfer/matic/:receiver/:amount/:pkSender', async (req, res) => {
   try {
 
-    const { sender, receiver, amount, pkSender } = req.params;
+    const { receiver, amount, pkSender } = req.params;
 
-    const nonce = await web3.eth.getTransactionCount(sender, 'latest'); // nonce starts counting from 0
+    const account = web3.eth.accounts.privateKeyToAccount(pkSender);
+
+    const nonce = await web3.eth.getTransactionCount(account.address, 'latest'); // nonce starts counting from 0
 
     const transaction = {
      'to': receiver,
