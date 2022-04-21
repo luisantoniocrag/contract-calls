@@ -30,7 +30,7 @@ const services = (app) => {
     async (req, res) => {
       try {
         const { addr, operator } = req.params;
-        
+
         const nftContract = new web3.eth.Contract(
           contract.abi,
           contractAddress
@@ -110,12 +110,12 @@ const services = (app) => {
    * @apiGroup NFTMarketPlace
    *
    * @apiParam {String} address address of sender
-   * @apiParam {String} nftAddress smart contract address of the NFTs
-   * @apiParam {Number} id id of the NFT
-   * @apiParam {Number} priceInWei price in WEI of the NFT order created
+   * @apiParam {String} pk private key of sender
+   * @apiParam {String} nftAddress smart contract address of the NFT Collection
+   * @apiParam {Number} id id of the NFT item
+   * @apiParam {Number} priceInWei price in WEI of the NFT order created (1**18 == 1 Matic)
    * @apiParam {Number} expiresAt expiration date in days
    * @apiParam {Boolean} exPay true|false
-   * @apiParam {String} pk private key of sender
    *
    * @apiSuccess {String} txID Transaction hash.
    */
@@ -123,22 +123,25 @@ const services = (app) => {
     "/mumbai/nft/market-create/:address/:nftAddress/:id/:priceInWei/:expiresAt/:exPay/:pk",
     async (req, res) => {
       try {
-        const { address, nftAddress, id, priceInWei, expiresAt, exPay, pk } =
+        let { address, nftAddress, id, priceInWei, expiresAt, exPay, pk } =
           req.params;
+
+        exPay = exPay === "on";
+
         const market = new web3.eth.Contract(marketContract.abi, marketAddress);
 
         const nonce = await web3.eth.getTransactionCount(address, "latest"); // get latest nonce
 
         const gasEstimate = await market.methods
-          .createOrder(nftAddress, id, priceInWei, expiresAt, Boolean(exPay))
-          .estimateGas({ from: address }); // estimate gas qty        
+          .createOrder(nftAddress, id, priceInWei, expiresAt, exPay)
+          .estimateGas({ from: address }); // estimate gas qty
 
         const tx = {
           to: marketAddress,
           nonce: nonce,
           gas: gasEstimate,
           data: market.methods
-            .createOrder(nftAddress, id, priceInWei, expiresAt, Boolean(exPay))
+            .createOrder(nftAddress, id, priceInWei, expiresAt, exPay)
             .encodeABI(),
         };
 
@@ -157,6 +160,62 @@ const services = (app) => {
         );
       } catch (error) {
         return res.status(400).json({ error: error.toString() });
+      }
+    }
+  );
+  
+  /**
+   * @api {get} http://localhost:3000/mumbai/nft/market-cancel-order/:ownerAddress/:pkOwner/:nftAddress/:orderID Cancel an order to sell an NFT
+   * @apiName Cancel an order to sell an NFT
+   * @apiGroup NFTMarketPlace
+   *
+   * @apiParam {String} ownerAddress address of order owner
+   * @apiParam {String} pkOwner private key of order owner
+   * @apiParam {String} nftAddress smart contract address of the NFT Collection
+   * @apiParam {Number} orderID id of the order id
+   *
+   * @apiSuccess {String} txID Transaction hash.
+   */
+
+  app.get(
+    "/mumbai/nft/market-cancel-order/:ownerAddress/:pkOwner/:nftAddress/:orderID",
+    async (req, res) => {
+      try {
+        let { ownerAddress, pkOwner, nftAddress, orderID } = req.params;
+
+        const market = new web3.eth.Contract(marketContract.abi, marketAddress);
+
+        const nonce = await web3.eth.getTransactionCount(
+          ownerAddress,
+          "latest"
+        ); // get latest nonce
+
+        const gasEstimate = await market.methods
+          .cancelOrder(nftAddress, orderID)
+          .estimateGas({ from: ownerAddress }); // estimate gas qty
+
+        const tx = {
+          to: marketAddress,
+          nonce: nonce,
+          gas: gasEstimate,
+          data: market.methods.cancelOrder(nftAddress, orderID).encodeABI(),
+        };
+
+        const signedTransaction = await web3.eth.accounts.signTransaction(
+          tx,
+          pkOwner
+        );
+
+        web3.eth.sendSignedTransaction(
+          signedTransaction.rawTransaction,
+          (error, hash) => {
+            if (!error) {
+              return res.status(200).json({ txID: hash });
+            }
+          }
+        );
+      } catch (error) {
+        return res.status(200).json({ error: error.toString() });
       }
     }
   );
