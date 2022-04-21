@@ -41,7 +41,7 @@ const services = (app) => {
    * @apiSuccess {Object} metadata The metadata of a given NFT ID.
    * @apiSuccessExample Success-Response:
    *    HTTP/1.1 200 OK
-   * 
+   *
    * {
    *  "image": "https://gateway.pinata.cloud/ipfs/QmaE8UNKmB2X1dy9naBchG3ajKKMnX44MKuxnPM2sSK4c1","attributes": [
    *  {
@@ -89,16 +89,16 @@ const services = (app) => {
     }
   });
 
-    /**
+  /**
    * @api {get} http://localhost:3000/mumbai/nft/transfer/:nftID/:from/:to/:pk Transfer NFT
    * @apiName Transfer NFT
    * @apiGroup NFT
-   * 
+   *
    * @apiParam {Number} nftID id of the NFT.
    * @apiParam {String} from NFT owner.
    * @apiParam {String} to NFT recipient.
    * @apiParam {String} pk priv_ket of the owner.
-   * 
+   *
    * @apiSuccess {String} txID Transaction hash.
    */
 
@@ -107,14 +107,18 @@ const services = (app) => {
       const { nftID, from, to, pk } = req.params;
       const nftContract = new web3.eth.Contract(contract.abi, contractAddress);
 
-      const nonce = await web3.eth.getTransactionCount(from, "latest"); // get latest nonce
+      const account = web3.eth.accounts.privateKeyToAccount(pk);
+
+      const nonce = await web3.eth.getTransactionCount(
+        account.address,
+        "latest"
+      );
 
       const gasEstimate = await nftContract.methods
         .safeTransferFrom(from, to, Number(nftID), 1, "0x00")
-        .estimateGas({ from: from }); // estimate gas qty
+        .estimateGas({ from: account.address }); // estimate gas qty
 
-      const tx = {
-        from: from,
+      const transaction = {
         to: contractAddress,
         nonce: nonce,
         gas: gasEstimate,
@@ -123,7 +127,10 @@ const services = (app) => {
           .encodeABI(),
       };
 
-      const signedTransaction = await web3.eth.accounts.signTransaction(tx, pk);
+      const signedTransaction = await web3.eth.accounts.signTransaction(
+        transaction,
+        pk
+      );
 
       web3.eth.sendSignedTransaction(
         signedTransaction.rawTransaction,
@@ -142,9 +149,9 @@ const services = (app) => {
    * @api {get} http://localhost:3000/mumbai/mempool/tx/:txID Transaction Info
    * @apiName Transaction Info
    * @apiGroup TX
-   * 
+   *
    * @apiParam {String} txID id of the transaction.
-   * 
+   *
    * @apiSuccess {Object} txInfo Transaction info.
    */
 
@@ -152,10 +159,9 @@ const services = (app) => {
     try {
       const { txID } = req.params;
 
-      const txInfo =  await web3.eth.getTransactionReceipt(txID);
+      const txInfo = await web3.eth.getTransactionReceipt(txID);
 
       return res.status(200).json({ txInfo });
-    
     } catch (error) {
       return res.status(400).json({ error: error.toString() });
     }
