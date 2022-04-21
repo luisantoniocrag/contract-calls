@@ -1,9 +1,9 @@
 const axios = require("axios");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
-const contract = require("../data/ABI.json");
+const contract = require("../data/ABI_NFT.json");
 require("dotenv").config();
 
-const contractAddress = String(process.env.SC_ADDRESS);
+const contractAddress = String(process.env.COLLECTION_SC_ADDRESS);
 const web3 = createAlchemyWeb3(String(process.env.ALCHEMY_URI));
 
 const services = (app) => {
@@ -73,7 +73,7 @@ const services = (app) => {
    *  "value": "Rays"
    *  }],
    * "name": "Token 6"
-}
+   * }
    */
   app.get("/mumbai/nft/data/:nftID", async (req, res) => {
     try {
@@ -84,6 +84,78 @@ const services = (app) => {
 
       const metadata = await axios.get(`${uri}/${nftID}`);
       return res.status(200).json(metadata.data);
+    } catch (error) {
+      return res.status(400).json({ error: error.toString() });
+    }
+  });
+
+    /**
+   * @api {get} http://localhost:3000/mumbai/nft/transfer/:nftID/:from/:to/:pk Transfer NFT
+   * @apiName Transfer NFT
+   * @apiGroup NFT
+   * 
+   * @apiParam {Number} nftID id of the NFT.
+   * @apiParam {String} from NFT owner.
+   * @apiParam {String} to NFT recipient.
+   * @apiParam {String} pk priv_ket of the owner.
+   * 
+   * @apiSuccess {String} txID Transaction hash.
+   */
+
+  app.get("/mumbai/nft/transfer/:nftID/:from/:to/:pk", async (req, res) => {
+    try {
+      const { nftID, from, to, pk } = req.params;
+      const nftContract = new web3.eth.Contract(contract.abi, contractAddress);
+
+      const nonce = await web3.eth.getTransactionCount(from, "latest"); // get latest nonce
+
+      const gasEstimate = await nftContract.methods
+        .safeTransferFrom(from, to, Number(nftID), 1, "0x00")
+        .estimateGas({ from: from }); // estimate gas qty
+
+      const tx = {
+        from: from,
+        to: contractAddress,
+        nonce: nonce,
+        gas: gasEstimate,
+        data: nftContract.methods
+          .safeTransferFrom(from, to, Number(nftID), 1, "0x00")
+          .encodeABI(),
+      };
+
+      const signedTransaction = await web3.eth.accounts.signTransaction(tx, pk);
+
+      web3.eth.sendSignedTransaction(
+        signedTransaction.rawTransaction,
+        (error, hash) => {
+          if (!error) {
+            return res.status(200).json({ txID: hash });
+          }
+        }
+      );
+    } catch (error) {
+      return res.status(400).json({ error: error.toString() });
+    }
+  });
+
+  /**
+   * @api {get} http://localhost:3000/mumbai/mempool/tx/:txID Transaction Info
+   * @apiName Transaction Info
+   * @apiGroup TX
+   * 
+   * @apiParam {String} txID id of the transaction.
+   * 
+   * @apiSuccess {Object} txInfo Transaction info.
+   */
+
+  app.get("/mumbai/mempool/tx/:txID", async (req, res) => {
+    try {
+      const { txID } = req.params;
+
+      const txInfo =  await web3.eth.getTransactionReceipt(txID);
+
+      return res.status(200).json({ txInfo });
+    
     } catch (error) {
       return res.status(400).json({ error: error.toString() });
     }
