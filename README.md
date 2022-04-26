@@ -38,7 +38,7 @@ Example:
 ALCHEMY_URI = 'https://polygon-mumbai.g.alchemy.com/v2/<key/>'
 ```
 
-`SC_ADDRESS` (NFT Smart Contract Address)
+`COLLECTION_SC_ADDRESS` (NFT Smart Contract Address)
 
 Example:
 

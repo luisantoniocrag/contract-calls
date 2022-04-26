@@ -286,6 +286,60 @@ const services = (app) => {
       }
     }
   );
+
+   /**
+   * @api {get} http://localhost:3000/mumbai/mempool/market/order-created-info/:txID Order Created Data
+   * @apiName Order Created Data
+   * @apiGroup NFTMarketPlace
+   *
+   * @apiParam {String} txID id of the transaction.
+   *
+   * @apiSuccess {Object} order Order created data.
+   */
+
+    app.get("/mumbai/mempool/market/order-created-info/:txID", async (req, res) => {
+      try {
+        const { txID } = req.params;
+  
+        const txInfo = await web3.eth.getTransactionReceipt(txID);
+  
+        let data = await web3.eth.abi.decodeLog(
+          [
+            {
+              type: "uint256",
+              name: "id",
+            },
+            {
+              type: "address",
+              name: "nftAddress",
+            },
+            {
+              type: "uint256",
+              name: "priceInWei",
+            },
+            {
+              type: "uint256",
+              name: "expiresAt",
+            },
+          ],
+          txInfo.logs[0].data,
+          txInfo.logs[0].topics
+        );
+  
+        return res
+          .status(200)
+          .json({
+            order: {
+              id: parseInt(data["id"], 10),
+              nftAddress: data["nftAddress"],
+              priceInWei: parseInt(data["priceInWei"], 10),
+              expiresAt: parseInt(data["expiresAt"], 10),
+            },
+          });
+      } catch (error) {
+        return res.status(400).json({ error: error.toString() });
+      }
+    });
 };
 
 module.exports = services;
