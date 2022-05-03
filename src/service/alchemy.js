@@ -82,7 +82,9 @@ const services = (app) => {
       const nftURI = await nftContract.methods.uri(nftID).call();
       const uri = nftURI.slice(0, -5);
 
-      const metadata = await axios.get(`${uri}/${nftID}`);
+      const hex = parseInt(nftID, 10).toString(16);
+
+      const metadata = await axios.get(`${uri}/${hex}`);
       return res.status(200).json(metadata.data);
     } catch (error) {
       return res.status(400).json({ error: error.toString() });

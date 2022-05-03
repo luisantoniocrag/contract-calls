@@ -171,6 +171,69 @@ const services = (app) => {
     }
   );
 
+    /**
+   * @api {post} http://localhost:3000/mumbai/nft/market-create-bach Create orders to sell an NFT in batch
+   * @apiName Create orders to sell an NFT in batch
+   * @apiGroup NFTMarketPlace
+   *
+   * @apiBody {String} pk private key of sender
+   * @apiBody {String} nftAddress address of the NFT collection
+   * @apiBody {Number[]} ids ids of the NFTs
+   * @apiBody {Number[]} priceInWei price in wei for each NFT order
+   * @apiBody {Number[]} expiresAt unix expiration date for each NFT order
+   * @apiBody {Boolean} exPay if this is an external or internal payment - not use at the moment (just false).
+   * 
+   * @apiSuccess {String} txID Transaction hash.
+   */
+     app.post(
+      "/mumbai/nft/market-create-bach",
+      async (req, res) => {
+        try {
+          let { pk, nftAddress, ids, priceInWei, expiresAt, exPay } = req.body;
+
+          exPay = exPay === "on";
+
+          const account = web3.eth.accounts.privateKeyToAccount(pk);
+  
+          const market = new web3.eth.Contract(marketContract.abi, marketAddress);
+  
+          const nonce = await web3.eth.getTransactionCount(
+            account.address,
+            "latest"
+          ); // get latest nonce
+  
+          const gasEstimate = await market.methods
+            .createBatchOrder(nftAddress, ids, priceInWei, expiresAt, exPay)
+            .estimateGas({ from: account.address }); // estimate gas qty
+  
+          const transaction = {
+            to: marketAddress,
+            nonce: nonce,
+            gas: gasEstimate,
+            data: market.methods
+              .createBatchOrder(nftAddress, ids, priceInWei, expiresAt, exPay)
+              .encodeABI(),
+          };
+  
+          const signedTransaction = await web3.eth.accounts.signTransaction(
+            transaction,
+            pk
+          );
+  
+          web3.eth.sendSignedTransaction(
+            signedTransaction.rawTransaction,
+            (error, hash) => {
+              if (!error) {
+                return res.status(200).json({ txID: hash });
+              }
+            }
+          );
+        } catch (error) {
+          return res.status(400).json({ error: error.toString() });
+        }
+      }
+    );
+
   /**
    * @api {get} http://localhost:3000/mumbai/nft/market-cancel-order/:pkOwner/:nftAddress/:orderID Cancel an order to sell an NFT
    * @apiName Cancel an order to sell an NFT
@@ -334,6 +397,61 @@ const services = (app) => {
               nftAddress: data["nftAddress"],
               priceInWei: parseInt(data["priceInWei"], 10),
               expiresAt: parseInt(data["expiresAt"], 10),
+            },
+          });
+      } catch (error) {
+        return res.status(400).json({ error: error.toString() });
+      }
+    });
+
+    /**
+   * @api {get} http://localhost:3000/mumbai/mempool/market/order-bach-created-info/:txID Order Batch Created Data
+   * @apiName Order Batch Created Data
+   * @apiGroup NFTMarketPlace
+   *
+   * @apiParam {String} txID id of the transaction.
+   *
+   * @apiSuccess {Object} order Order created data.
+   */
+
+     app.get("/mumbai/mempool/market/order-bach-created-info/:txID", async (req, res) => {
+      try {
+        const { txID } = req.params;
+  
+        const txInfo = await web3.eth.getTransactionReceipt(txID);
+  
+        let data = await web3.eth.abi.decodeLog(
+          [
+            {
+              type: "uint256[]",
+              name: "id"
+
+            },
+            {
+              type: "address",
+              name: "nftAddress",
+            },
+            {
+              type: "uint256[]",
+              name: "priceInWei",
+            },
+            {
+              type: "uint256[]",
+              name: "expiresAt",
+            },
+          ],
+          txInfo.logs[0].data,
+          txInfo.logs[0].topics
+        );
+  
+        return res
+          .status(200)
+          .json({
+            order: {
+              id: data["id"],
+              nftAddress: data["nftAddress"],
+              priceInWei: data["priceInWei"],
+              expiresAt: data["expiresAt"],
             },
           });
       } catch (error) {
