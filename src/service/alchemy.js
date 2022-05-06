@@ -90,63 +90,7 @@ const services = (app) => {
       return res.status(400).json({ error: error.toString() });
     }
   });
-
-  /**
-   * @api {get} http://localhost:3000/mumbai/nft/transfer/:nftID/:from/:to/:pk Transfer NFT
-   * @apiName Transfer NFT
-   * @apiGroup NFT
-   *
-   * @apiParam {Number} nftID id of the NFT.
-   * @apiParam {String} from NFT owner.
-   * @apiParam {String} to NFT recipient.
-   * @apiParam {String} pk priv_ket of the owner.
-   *
-   * @apiSuccess {String} txID Transaction hash.
-   */
-
-  app.get("/mumbai/nft/transfer/:nftID/:from/:to/:pk", async (req, res) => {
-    try {
-      const { nftID, from, to, pk } = req.params;
-      const nftContract = new web3.eth.Contract(contract.abi, contractAddress);
-
-      const account = web3.eth.accounts.privateKeyToAccount(pk);
-
-      const nonce = await web3.eth.getTransactionCount(
-        account.address,
-        "latest"
-      );
-
-      const gasEstimate = await nftContract.methods
-        .safeTransferFrom(from, to, Number(nftID), 1, "0x00")
-        .estimateGas({ from: account.address }); // estimate gas qty
-
-      const transaction = {
-        to: contractAddress,
-        nonce: nonce,
-        gas: gasEstimate,
-        data: nftContract.methods
-          .safeTransferFrom(from, to, Number(nftID), 1, "0x00")
-          .encodeABI(),
-      };
-
-      const signedTransaction = await web3.eth.accounts.signTransaction(
-        transaction,
-        pk
-      );
-
-      web3.eth.sendSignedTransaction(
-        signedTransaction.rawTransaction,
-        (error, hash) => {
-          if (!error) {
-            return res.status(200).json({ txID: hash });
-          }
-        }
-      );
-    } catch (error) {
-      return res.status(400).json({ error: error.toString() });
-    }
-  });
-
+  
   /**
    * @api {get} http://localhost:3000/mumbai/mempool/tx/:txID Transaction Info
    * @apiName Transaction Info
