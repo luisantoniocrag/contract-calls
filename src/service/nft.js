@@ -82,6 +82,32 @@ const services = (app) => {
     }
   });
 
+   /**
+   * @api {get} http://localhost:3000/mumbai/nft/get-token-id-owners/:tokenId Get token Owners by token Id
+   * @apiName getTokenIdOwners
+   * @apiGroup NFT
+   * 
+   * @apiParam {String} tokenId token Id
+   *
+   * @apiSuccess {Oject} nftInfo NFT info and owner.
+   */
+
+    app.get("/mumbai/nft/get-token-id-owners/:tokenId", async (req, res) => {
+      await Moralis.start({ serverUrl, appId, masterKey });
+      try {
+        const { tokenId } = req.params;
+        const nftInfo = await Moralis.Web3API.token.getTokenIdOwners({
+          address: collectionAddress,
+          token_id: String(tokenId),
+          chain: "mumbai",
+        });
+  
+        return res.status(200).json(nftInfo.result);
+      } catch (error) {
+        return res.status(400).json({ error: error.toString() });
+      }
+    });
+
   /**
    * @api {get} http://localhost:3000/mumbai/nft/transfer/:collectionAddress/:nftID/:to/:pk Transfer NFT
    * @apiName Transfer NFT
