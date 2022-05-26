@@ -2,6 +2,7 @@ const Moralis = require("moralis/node");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 require("dotenv").config();
 const contract = require("../data/ABI_NFT.json");
+const { getBestGasPrice } = require("../helpers/web3Helpers");
 
 /* Moralis init code */
 const serverUrl = String(process.env.MORALIS_SERVER);
@@ -129,6 +130,9 @@ const services = (app) => {
 
       const account = web3.eth.accounts.privateKeyToAccount(pk);
 
+      const gasPrice = await getBestGasPrice();
+      console.log("gasPrice:", gasPrice);
+
       const nonce = await web3.eth.getTransactionCount(
         account.address,
         "latest"
@@ -142,6 +146,7 @@ const services = (app) => {
         to: collectionAddress,
         nonce: nonce,
         gas: gasEstimate,
+        gasPrice,
         data: nftContract.methods
           .safeTransferFrom(account.address, to, Number(nftID), 1, "0x00")
           .encodeABI(),
