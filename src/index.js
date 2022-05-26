@@ -1,9 +1,12 @@
-const alchemy = require("./service/alchemy");
-const market = require("./service/market");
-const matic = require("./service/matic");
-const nft = require("./service/nft");
 const cors = require("cors");
 const express = require("express");
+
+const nft = require("./service/nft");
+const util = require("./service/util");
+const matic = require("./service/matic");
+const market = require("./service/market");
+const alchemy = require("./service/alchemy");
+const bitso = require("./service/bitso");
 
 const app = express();
 app.use(express.json());
@@ -14,7 +17,9 @@ const server = () => {
 
   alchemy(app);
   market(app);
+  bitso(app);
   matic(app);
+  util(app);
   nft(app);
 
   app.listen(PORT, () => {
