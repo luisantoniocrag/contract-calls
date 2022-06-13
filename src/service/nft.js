@@ -131,7 +131,6 @@ const services = (app) => {
       const account = web3.eth.accounts.privateKeyToAccount(pk);
 
       const gasPrice = await getBestGasPrice();
-      console.log("gasPrice:", gasPrice);
 
       const nonce = await web3.eth.getTransactionCount(
         account.address,
@@ -140,7 +139,7 @@ const services = (app) => {
 
       const gasEstimate = await nftContract.methods
         .safeTransferFrom(account.address, to, Number(nftID), 1, "0x00")
-        .estimateGas({ from: account.address }); // estimate gas qty
+        .estimateGas();
 
       const transaction = {
         to: collectionAddress,
