@@ -212,6 +212,100 @@ const services = (app) => {
       return res.status(400).json({ error: error.toString() });
     }
   });
+
+    /**
+   * @api {get} http://localhost:3000/bitso/get-withdraw-info/:wid get user withdraw infod
+   * @apiName Get User Withdraw Info
+   * @apiGroup Bitso
+   * 
+   * @apiParam {String} wid transfer
+   * 
+   * @apiSuccess {Object} order Order created data.
+   */
+
+  app.get("/bitso/get-withdraw-info/:wid", async (req, res) => {
+      try {
+        const { wid } = req.params;
+        const http_method = "GET";
+        const request_path = `/v3/withdrawals/${wid}`;
+  
+        // Create the signature
+        const nonce = new Date().getTime();
+        const message = nonce+http_method+request_path;
+        const signature = crypto
+          .createHmac("sha256", secret)
+          .update(message)
+          .digest("hex");
+  
+        // Build the auth header
+        const auth_header = "Bitso " + key + ":" + nonce + ":" + signature;
+  
+        // Send request
+        const options = {
+          url: `${API_BASE_URI}${request_path}`,
+          method: http_method,
+          headers: {
+            Authorization: auth_header,
+            "Content-Type": "application/json",
+          }
+        };
+  
+        // Send request
+        const request = await axios(options);
+        return res.status(200).json({ response: request.data });
+      } catch (error) {
+        return res.status(400).json({ error: error.toString() });
+      }
+  });
+
+  /**
+   * @api {post} http://localhost:3000/bitso/register-webhook Register a url to the Bitso Webhook
+   * @apiName Register a URL to the Bitso Webhooks
+   * @apiGroup Bitso
+   * 
+   * @apiBody {String} callback_url	 url to get the POST requests
+   * 
+   * @apiSuccess {Object} sucess about success of the call.
+   */
+
+  app.post("/bitso/register-webhook/", async (req, res) => {
+    try {
+      const { callback_url } = req.body;
+      const http_method = "POST";
+      const request_path = "/v3/webhooks/";
+
+      const jsonPayload = {callback_url};
+
+      // Create the signature
+      const nonce = new Date().getTime();
+      const payload = JSON.stringify(jsonPayload);
+      const message = nonce+http_method+request_path+payload;
+      const signature = crypto
+        .createHmac("sha256", secret)
+        .update(message)
+        .digest("hex");
+
+      // Build the auth header
+      const auth_header = "Bitso " + key + ":" + nonce + ":" + signature;
+
+      // Send request
+      const options = {
+        url: `${API_BASE_URI}${request_path}`,
+        method: http_method,
+        headers: {
+          Authorization: auth_header,
+          "Content-Type": "application/json",
+        },
+        data: payload
+      };
+
+      // Send request
+      const request = await axios(options);
+      return res.status(200).json({ response: request.data });
+    } catch (error) {
+      return res.status(400).json({ error: error.toString() });
+    }
+  });
 };
 
 module.exports = services;
