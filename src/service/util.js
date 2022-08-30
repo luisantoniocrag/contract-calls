@@ -51,9 +51,37 @@ const services = (app) => {
 
         return res.status(200).json({ result: parseInt(data.data.result, 16)  })
       } catch (error) {
-        return res.status(400).json({ error: error.toString() });
       }
   })
+
+  /**
+   * @api {get} http://localhost:3000/util/get-private-key/:secret/:address/:userSecret get private key
+   * @apiName User Private Key
+   * @apiGroup Util
+   * 
+   * @apiParam {String} address the address of the user.
+   * @apiParam {String} secret general.
+   * @apiParam {String} userSecret secret of the user.
+   * 
+   * @apiSuccess {String} Private Key
+   */
+  app.get('/util/get-private-key/:secret/:address/:userSecret', async (req, res) => {
+    try {
+      const { secret, address,userSecret } = req.params;
+      const crypto = require('crypto');
+      const secretKey = `${secret}${address}`
+      //hash private
+      var decypher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(secretKey.substring(2,34)),secretKey.substring(8,24));
+      //deccrypt private
+      let privateKey = decypher.update(userSecret, 'hex','utf8')
+      privateKey += decypher.final('utf8');
+
+      return res.status(200).json({ result: privateKey });
+    } catch (error) {
+      return res.status(400).json({ error: error.toString() });
+
+    }
+  });
 };
 
 module.exports = services;
